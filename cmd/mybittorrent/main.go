@@ -32,7 +32,7 @@ func decodeBencode(bencodedString string) (interface{}, error) {
 		}
 
 		return bencodedString[firstColonIndex+1 : firstColonIndex+1+length], nil
-	} else if bencodedString[0] == 'i' {
+	} else if bencodedString[0] == 'i' && bencodedString[len(bencodedString)-1] == 'e' {
 		endIndex := strings.Index(bencodedString, "e")
 		integer, err := strconv.Atoi(bencodedString[1:endIndex])
 		if err != nil {
