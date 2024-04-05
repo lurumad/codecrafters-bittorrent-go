@@ -53,6 +53,7 @@ func TestDecodeBencode(t *testing.T) {
 		{bencoded: "5:hello", want: "hello"},
 		{bencoded: "i52e", want: 52},
 		{bencoded: "l5:helloi52ee", want: []interface{}{"hello", 52}},
+		{bencoded: "le", want: []interface{}{}},
 	} {
 		got, end, err := decodeBencode(tc.bencoded)
 

@@ -66,6 +66,10 @@ func decodeInteger(bencodedString string) (int, int, error) {
 
 func decodeList(bencodedString string) (BencodeType, int, error) {
 	list := make([]BencodeType, 0)
+	if bencodedString == "le" {
+		return list, len(bencodedString), nil
+	}
+
 	processedBencodedString := bencodedString[1:]
 	for ok := true; ok; ok = len(processedBencodedString) > 1 {
 		value, end, err := decodeBencode(processedBencodedString)
