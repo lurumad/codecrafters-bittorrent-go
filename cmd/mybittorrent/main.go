@@ -66,13 +66,9 @@ func decodeInteger(bencodedString string) (int, int, error) {
 
 func decodeList(bencodedString string) (BencodeType, int, error) {
 	list := make([]BencodeType, 0)
-	if bencodedString == "le" {
-		return list, len(bencodedString), nil
-	}
 	length := 0
-	endIndex := strings.LastIndex(bencodedString, "e")
-	processedBencodedString := bencodedString[1:endIndex]
-	for ok := true; ok; ok = len(processedBencodedString) > 1 {
+	processedBencodedString := bencodedString[1:]
+	for processedBencodedString[0] != 'e' {
 		value, end, err := decodeBencode(processedBencodedString)
 		if err != nil {
 			return make([]BencodeType, 0), 0, err
@@ -82,7 +78,7 @@ func decodeList(bencodedString string) (BencodeType, int, error) {
 		processedBencodedString = processedBencodedString[end:]
 	}
 
-	return list, len(bencodedString), nil
+	return list, len(bencodedString) - len(processedBencodedString) + 1, nil
 }
 
 func main() {

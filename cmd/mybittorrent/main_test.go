@@ -50,11 +50,12 @@ func TestDecodeBencode(t *testing.T) {
 	}
 
 	for _, tc := range []testCase{
-		{bencoded: "5:hello", want: "hello"},
-		{bencoded: "i52e", want: 52},
-		{bencoded: "l5:helloi52ee", want: []interface{}{"hello", 52}},
-		{bencoded: "le", want: []interface{}{}},
-		{bencoded: "lli940e5:appleee", want: []interface{}{[]interface{}{"apple", 940}}},
+		{bencoded: "5:hello", want: "hello", end: 7},
+		{bencoded: "i52e", want: 52, end: 4},
+		{bencoded: "l5:helloi52ee", want: []interface{}{"hello", 52}, end: 13},
+		{bencoded: "le", want: []interface{}{}, end: 2},
+		{bencoded: "lli940e5:appleee", want: []interface{}{[]interface{}{940, "apple"}}, end: 16},
+		{bencoded: "lli4eei5ee", want: []interface{}{[]interface{}{4}, 5}, end: 10},
 	} {
 		got, end, err := decodeBencode(tc.bencoded)
 
@@ -70,8 +71,8 @@ func TestDecodeBencode(t *testing.T) {
 			t.Errorf("%v bad result - want %v, got %v", tc.bencoded, tc.want, got)
 		}
 
-		if end != len(tc.bencoded) {
-			t.Errorf("%v bad end - want %v, got %v", tc.bencoded, len(tc.bencoded), end)
+		if end != tc.end {
+			t.Errorf("%v bad end - want %v, got %v", tc.bencoded, tc.end, end)
 		}
 	}
 }
