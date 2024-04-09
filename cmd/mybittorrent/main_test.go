@@ -9,36 +9,36 @@ import (
 func TestErrBencodeString(t *testing.T) {
 	bencodedString := "5hello"
 
-	got, end, err := decodeBencode(bencodedString)
+	bencodeDecoded := decodeBencode(bencodedString)
 
-	if !errors.Is(err, ErrBencodeString) {
-		t.Errorf("expected ErrBencodeString - got: %v", err)
+	if !errors.Is(bencodeDecoded.err, ErrBencodeString) {
+		t.Errorf("expected ErrBencodeString - got: %v", bencodeDecoded.err)
 	}
 
-	if got != "" {
-		t.Errorf("error result should be empty - got: %v", got)
+	if bencodeDecoded.value != "" {
+		t.Errorf("error result should be empty - got: %v", bencodeDecoded.value)
 	}
 
-	if end > 0 {
-		t.Errorf("error end of string should be 0 - got %d", end)
+	if bencodeDecoded.end > 0 {
+		t.Errorf("error end of string should be 0 - got %d", bencodeDecoded.end)
 	}
 }
 
 func TestErrDecodeBencodeInteger(t *testing.T) {
 	bencodedString := "i52"
 
-	got, end, err := decodeBencode(bencodedString)
+	bencodeDecoded := decodeBencode(bencodedString)
 
-	if !errors.Is(err, ErrBencodeInteger) {
-		t.Errorf("expected ErrBencodeInteger - got: %v", err)
+	if !errors.Is(bencodeDecoded.err, ErrBencodeInteger) {
+		t.Errorf("expected ErrBencodeInteger - got: %v", bencodeDecoded.err)
 	}
 
-	if got != 0 {
-		t.Errorf("error result should be 0 - got: %v", got)
+	if bencodeDecoded.value != 0 {
+		t.Errorf("error result should be 0 - got: %v", bencodeDecoded.value)
 	}
 
-	if end > 0 {
-		t.Errorf("error end should be 0 - got %d", end)
+	if bencodeDecoded.end > 0 {
+		t.Errorf("error end should be 0 - got %d", bencodeDecoded.end)
 	}
 }
 
@@ -56,23 +56,28 @@ func TestDecodeBencode(t *testing.T) {
 		{bencoded: "le", want: []interface{}{}, end: 2},
 		{bencoded: "lli940e5:appleee", want: []interface{}{[]interface{}{940, "apple"}}, end: 16},
 		{bencoded: "lli4eei5ee", want: []interface{}{[]interface{}{4}, 5}, end: 10},
+		{bencoded: "d3:foo3:bar5:helloi52ee", want: map[interface{}]interface{}{
+			"foo":   "bar",
+			"hello": 52,
+		}, end: 23},
+		{bencoded: "de", want: map[interface{}]interface{}{}, end: 2},
 	} {
-		got, end, err := decodeBencode(tc.bencoded)
+		bencodeDecoded := decodeBencode(tc.bencoded)
 
-		if err != nil {
-			t.Fatal(err)
+		if bencodeDecoded.err != nil {
+			t.Fatal(bencodeDecoded.err)
 		}
 
-		if got == "" {
-			t.Errorf("%v error result should be empty - got: %v", tc.bencoded, got)
+		if bencodeDecoded.value == "" {
+			t.Errorf("%v error result should be empty - got: %v", tc.bencoded, bencodeDecoded.value)
 		}
 
-		if !equals(got, tc.want) {
-			t.Errorf("%v bad result - want %v, got %v", tc.bencoded, tc.want, got)
+		if !equals(bencodeDecoded.value, tc.want) {
+			t.Errorf("%v bad result - want %v, got %v", tc.bencoded, tc.want, bencodeDecoded.value)
 		}
 
-		if end != tc.end {
-			t.Errorf("%v bad end - want %v, got %v", tc.bencoded, tc.end, end)
+		if bencodeDecoded.end != tc.end {
+			t.Errorf("%v bad end - want %v, got %v", tc.bencoded, tc.end, bencodeDecoded.end)
 		}
 	}
 }
@@ -91,7 +96,13 @@ func equals(a, b interface{}) bool {
 			return false
 		}
 		return reflect.DeepEqual(a, b)
+	case map[interface{}]interface{}:
+		b := b.(map[interface{}]interface{})
+		if len(a) != len(b) {
+			return false
+		}
+		return reflect.DeepEqual(a, b)
 	default:
-		return true
+		return false
 	}
 }
