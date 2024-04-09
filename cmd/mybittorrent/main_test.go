@@ -54,6 +54,7 @@ func TestDecodeBencode(t *testing.T) {
 		{bencoded: "i52e", want: 52},
 		{bencoded: "l5:helloi52ee", want: []interface{}{"hello", 52}},
 		{bencoded: "le", want: []interface{}{}},
+		{bencoded: "lli940e5:appleee", want: []interface{}{[]interface{}{"apple", 940}}},
 	} {
 		got, end, err := decodeBencode(tc.bencoded)
 
@@ -88,12 +89,7 @@ func equals(a, b interface{}) bool {
 		if len(a) != len(b) {
 			return false
 		}
-		for index, item := range a {
-			if item != b[index] {
-				return false
-			}
-		}
-		return true
+		return reflect.DeepEqual(a, b)
 	default:
 		return true
 	}

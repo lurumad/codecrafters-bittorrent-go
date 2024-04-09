@@ -52,16 +52,16 @@ func decodeString(bencodedString string) (string, int, error) {
 }
 
 func decodeInteger(bencodedString string) (int, int, error) {
-	firsteIndex := strings.Index(bencodedString, "e")
-	if firsteIndex == -1 {
+	endIndex := strings.Index(bencodedString, "e")
+	if endIndex == -1 {
 		return 0, 0, ErrBencodeInteger
 	}
 
-	integer, err := strconv.Atoi(bencodedString[1:firsteIndex])
+	integer, err := strconv.Atoi(bencodedString[1:endIndex])
 	if err != nil {
 		return 0, 0, err
 	}
-	return integer, firsteIndex + 1, nil
+	return integer, endIndex + 1, nil
 }
 
 func decodeList(bencodedString string) (BencodeType, int, error) {
@@ -69,19 +69,17 @@ func decodeList(bencodedString string) (BencodeType, int, error) {
 	if bencodedString == "le" {
 		return list, len(bencodedString), nil
 	}
-
-	processedBencodedString := bencodedString[1:]
+	length := 0
+	endIndex := strings.LastIndex(bencodedString, "e")
+	processedBencodedString := bencodedString[1:endIndex]
 	for ok := true; ok; ok = len(processedBencodedString) > 1 {
 		value, end, err := decodeBencode(processedBencodedString)
 		if err != nil {
 			return make([]BencodeType, 0), 0, err
 		}
 		list = append(list, value)
+		length += end
 		processedBencodedString = processedBencodedString[end:]
-	}
-
-	if processedBencodedString == "" || processedBencodedString[0] != 'e' {
-		return make([]BencodeType, 0), 0, ErrBencodeList
 	}
 
 	return list, len(bencodedString), nil
