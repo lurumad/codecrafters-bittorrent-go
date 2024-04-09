@@ -85,7 +85,7 @@ func decodeList(bencodedString string) BencodeDecoded {
 }
 
 func decodeDictionary(bencodedString string) BencodeDecoded {
-	dict := map[interface{}]interface{}{}
+	dict := make(map[string]interface{})
 	length := 0
 	processedBencodedString := bencodedString[1:]
 	for processedBencodedString[0] != 'e' {
@@ -101,7 +101,7 @@ func decodeDictionary(bencodedString string) BencodeDecoded {
 		}
 		length += bencodeValue.end
 		processedBencodedString = processedBencodedString[bencodeValue.end:]
-		dict[bencodeKey.value] = bencodeValue.value
+		dict[bencodeKey.value.(string)] = bencodeValue.value
 	}
 	end := len(bencodedString) - len(processedBencodedString) + 1
 	return BencodeDecoded{dict, end, nil}

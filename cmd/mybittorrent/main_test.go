@@ -57,11 +57,11 @@ func TestDecodeBencode(t *testing.T) {
 		{bencoded: "le", want: []interface{}{}, end: 2},
 		{bencoded: "lli940e5:appleee", want: []interface{}{[]interface{}{940, "apple"}}, end: 16},
 		{bencoded: "lli4eei5ee", want: []interface{}{[]interface{}{4}, 5}, end: 10},
-		{bencoded: "d3:foo3:bar5:helloi52ee", want: map[interface{}]interface{}{
+		{bencoded: "d3:foo3:bar5:helloi52ee", want: map[string]interface{}{
 			"foo":   "bar",
 			"hello": 52,
 		}, end: 23},
-		{bencoded: "de", want: map[interface{}]interface{}{}, end: 2},
+		{bencoded: "de", want: map[string]interface{}{}, end: 2},
 	} {
 		bencodeDecoded := decodeBencode(tc.bencoded)
 
@@ -97,8 +97,8 @@ func equals(a, b interface{}) bool {
 			return false
 		}
 		return reflect.DeepEqual(a, b)
-	case map[interface{}]interface{}:
-		b := b.(map[interface{}]interface{})
+	case map[string]interface{}:
+		b := b.(map[string]interface{})
 		if len(a) != len(b) {
 			return false
 		}
