@@ -50,6 +50,7 @@ func TestDecodeBencode(t *testing.T) {
 	}
 
 	for _, tc := range []testCase{
+		{bencoded: "4:pear", want: "pear", end: 6},
 		{bencoded: "5:hello", want: "hello", end: 7},
 		{bencoded: "i52e", want: 52, end: 4},
 		{bencoded: "l5:helloi52ee", want: []interface{}{"hello", 52}, end: 13},
