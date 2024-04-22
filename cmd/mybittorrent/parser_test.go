@@ -30,15 +30,15 @@ func TestParse(t *testing.T) {
 		t.Errorf("announce bad result - want %v, got %v", "http://bittorrent-test-tracker.codecrafters.io/announce", parsed.metainfo.announce)
 	}
 
-	if parsed.metainfo.info.length != 92063 {
-		t.Errorf("length bad result - want %d, got %d", 92063, parsed.metainfo.info.length)
+	if parsed.metainfo.info["length"] != 92063 {
+		t.Errorf("length bad result - want %d, got %d", 92063, parsed.metainfo.info["length"])
 	}
 
-	if parsed.metainfo.info.pieceLength != 32768 {
-		t.Errorf("piece length bad result - want %d, got %d", 32768, parsed.metainfo.info.pieceLength)
+	if parsed.metainfo.info["piece length"] != 32768 {
+		t.Errorf("piece length bad result - want %d, got %d", 32768, parsed.metainfo.info["pieceLength"])
 	}
 
-	if parsed.metainfo.info.name != "sample.txt" {
-		t.Errorf("name bad result - want %v, got %v", "sample.txt", parsed.metainfo.info.name)
+	if parsed.metainfo.info["name"] != "sample.txt" {
+		t.Errorf("name bad result - want %v, got %v", "sample.txt", parsed.metainfo.info["name"])
 	}
 }

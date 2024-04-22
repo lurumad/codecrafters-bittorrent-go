@@ -12,19 +12,12 @@ var (
 	ErrInvalidMetainfo    = errors.New("invalid metainfo")
 )
 
-type Parser struct {
-}
-
-type Info struct {
-	length      int
-	name        string
-	pieceLength int
-	pieces      string
+type TorrentFileParser struct {
 }
 
 type Metainfo struct {
 	announce string
-	info     Info
+	info     map[string]interface{}
 }
 
 type Parsed struct {
@@ -32,11 +25,11 @@ type Parsed struct {
 	err      error
 }
 
-func NewParser() *Parser {
-	return &Parser{}
+func NewParser() *TorrentFileParser {
+	return &TorrentFileParser{}
 }
 
-func (p *Parser) parse(b *Bencode, filename string) *Parsed {
+func (p *TorrentFileParser) parse(b *Bencode, filename string) *Parsed {
 	fileContents, err := os.ReadFile(filename)
 	if err != nil {
 		log.Println(err)
@@ -94,11 +87,11 @@ func (p *Parser) parse(b *Bencode, filename string) *Parsed {
 
 	response := Metainfo{
 		announce: metainfo["announce"].(string),
-		info: Info{
-			length:      length,
-			name:        info["name"].(string),
-			pieceLength: pieceLength,
-			pieces:      info["pieces"].(string),
+		info: map[string]interface{}{
+			"length":       length,
+			"name":         info["name"].(string),
+			"piece length": pieceLength,
+			"pieces":       info["pieces"].(string),
 		},
 	}
 	return &Parsed{

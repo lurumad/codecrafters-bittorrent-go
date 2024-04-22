@@ -83,6 +83,42 @@ func TestDecodeBencode(t *testing.T) {
 	}
 }
 
+func TestEncodeBencode(t *testing.T) {
+	type testCase struct {
+		got  interface{}
+		want string
+		end  int
+	}
+
+	for _, tc := range []testCase{
+		{got: "pear", want: "4:pear"},
+		{got: 52, want: "i52e"},
+		{got: 0, want: "i0e"},
+		{got: []interface{}{}, want: "le"},
+		{got: []interface{}{[]interface{}{940, "apple"}}, want: "lli940e5:appleee"},
+		{got: []interface{}{[]interface{}{4}, 5}, want: "lli4eei5ee"},
+		{got: map[string]interface{}{}, want: "de"},
+		{got: map[string]interface{}{
+			"foo":   "bar",
+			"hello": 52,
+		}, want: "d3:foo3:bar5:helloi52ee"},
+	} {
+		bencodeEncoded := NewBencode().encode(tc.got)
+
+		if bencodeEncoded.err != nil {
+			t.Fatal(bencodeEncoded.err)
+		}
+
+		if bencodeEncoded.value == "" {
+			t.Error("error result should not be empty")
+		}
+
+		if !equals(bencodeEncoded.value, tc.want) {
+			t.Errorf("%v bad result - want %v, got %v", tc.got, tc.want, bencodeEncoded.value)
+		}
+	}
+}
+
 func equals(a, b interface{}) bool {
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
 		return false
