@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,13 +25,21 @@ func main() {
 	} else if command == "info" {
 		file := os.Args[2]
 		bencode := NewBencode()
-		parsed := NewParser().parse(bencode, file)
+		hasher := NewBencodeSHA1Hasher()
+		parsed := NewTorrentFileParser().parse(bencode, file)
 		bencoded := bencode.encode(parsed.metainfo.info)
-		hash := NewBencodeSHA1Hasher().hash(bencoded.value)
+		hash := hasher.hash([]byte(bencoded.value))
 		fmt.Println("Tracker URL: " + parsed.metainfo.announce)
 		fmt.Println("Length:", parsed.metainfo.info["length"])
 		fmt.Println("Info Hash:", hash)
-
+		fmt.Println("Piece Length:", parsed.metainfo.info["piece length"])
+		fmt.Println("Piece Hashes:")
+		pieces := parsed.metainfo.info["pieces"].(string)
+		for len(pieces) > 0 {
+			piece := pieces[:20]
+			fmt.Println(hex.EncodeToString([]byte(piece)))
+			pieces = pieces[20:]
+		}
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)

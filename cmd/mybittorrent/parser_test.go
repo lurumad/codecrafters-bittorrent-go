@@ -6,7 +6,7 @@ import (
 )
 
 func TestErrParseTorrentFile(t *testing.T) {
-	parsed := NewParser().parse(NewBencode(), "invalid filename")
+	parsed := NewTorrentFileParser().parse(NewBencode(), "invalid filename")
 	if !errors.Is(parsed.err, ErrInvalidTorrentFile) {
 		t.Errorf("expected ErrInvalidTorrentFile - got: %v", parsed.err)
 	}
@@ -17,7 +17,7 @@ func TestErrParseTorrentFile(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	parsed := NewParser().parse(NewBencode(), "../../sample.torrent")
+	parsed := NewTorrentFileParser().parse(NewBencode(), "../../sample.torrent")
 	if parsed.err != nil {
 		t.Fatal(parsed.err)
 	}

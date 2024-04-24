@@ -11,9 +11,9 @@ func NewBencodeSHA1Hasher() *BencodeSHA1Hasher {
 	return &BencodeSHA1Hasher{}
 }
 
-func (h *BencodeSHA1Hasher) hash(info string) string {
+func (h *BencodeSHA1Hasher) hash(value []byte) string {
 	hasher := sha1.New()
-	hasher.Write([]byte(info))
+	hasher.Write(value)
 	hash := hasher.Sum(nil)
 	return hex.EncodeToString(hash)
 }

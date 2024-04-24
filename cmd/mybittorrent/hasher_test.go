@@ -5,16 +5,16 @@ import (
 )
 
 func TestHashInfoDictionary(t *testing.T) {
-	want := "d69f91e6b2ae4c542468d1073a71d4ea13879a7f"
+	want := "1cad4a486798d952614c394eb15e75bec587fd08"
 	bencode := NewBencode()
-	parsed := NewParser().parse(bencode, "../../sample.torrent")
+	parsed := NewTorrentFileParser().parse(bencode, "../../sample.torrent")
 	if parsed.err != nil {
 		t.Fatal(parsed.err)
 	}
 	bencoded := bencode.encode(parsed.metainfo.info)
 
-	hash := NewBencodeSHA1Hasher().hash(bencoded.value)
-	
+	hash := NewBencodeSHA1Hasher().hash([]byte(bencoded.value))
+
 	if hash != want {
 		t.Errorf("wrong hash - want %v, got %v", want, hash)
 	}

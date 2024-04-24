@@ -25,7 +25,7 @@ type Parsed struct {
 	err      error
 }
 
-func NewParser() *TorrentFileParser {
+func NewTorrentFileParser() *TorrentFileParser {
 	return &TorrentFileParser{}
 }
 
