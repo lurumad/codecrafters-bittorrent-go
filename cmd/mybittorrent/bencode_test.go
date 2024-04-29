@@ -9,7 +9,7 @@ import (
 func TestErrBencodeString(t *testing.T) {
 	bencodedString := "5hello"
 
-	bencodeDecoded := NewBencode().decode(bencodedString)
+	bencodeDecoded := NewBencode().Decode(bencodedString)
 
 	if !errors.Is(bencodeDecoded.err, ErrBencodeString) {
 		t.Errorf("expected ErrBencodeString - got: %v", bencodeDecoded.err)
@@ -27,7 +27,7 @@ func TestErrBencodeString(t *testing.T) {
 func TestErrDecodeBencodeInteger(t *testing.T) {
 	bencodedString := "i52"
 
-	bencodeDecoded := NewBencode().decode(bencodedString)
+	bencodeDecoded := NewBencode().Decode(bencodedString)
 
 	if !errors.Is(bencodeDecoded.err, ErrBencodeInteger) {
 		t.Errorf("expected ErrBencodeInteger - got: %v", bencodeDecoded.err)
@@ -63,7 +63,7 @@ func TestDecodeBencode(t *testing.T) {
 		}, end: 23},
 		{bencoded: "de", want: map[string]interface{}{}, end: 2},
 	} {
-		bencodeDecoded := NewBencode().decode(tc.bencoded)
+		bencodeDecoded := NewBencode().Decode(tc.bencoded)
 
 		if bencodeDecoded.err != nil {
 			t.Fatal(bencodeDecoded.err)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -33,7 +34,7 @@ func NewBencode() *Bencode {
 	return &Bencode{}
 }
 
-func (b *Bencode) decode(bencode string) BencodeDecoded {
+func (b *Bencode) Decode(bencode string) BencodeDecoded {
 	if unicode.IsDigit(rune(bencode[0])) {
 		return b.decodeString(bencode)
 	} else if bencode[0] == 'i' {
@@ -77,7 +78,7 @@ func (b *Bencode) decodeList(bencode string) BencodeDecoded {
 	list := make([]BencodeType, 0)
 	processedBencode := bencode[1:]
 	for processedBencode[0] != 'e' {
-		bencodeDecoded := b.decode(processedBencode)
+		bencodeDecoded := b.Decode(processedBencode)
 		if bencodeDecoded.err != nil {
 			return BencodeDecoded{make([]BencodeType, 0), 0, bencodeDecoded.err}
 		}
@@ -92,12 +93,12 @@ func (b *Bencode) decodeDictionary(bencode string) BencodeDecoded {
 	dict := make(map[string]interface{})
 	processedBencode := bencode[1:]
 	for processedBencode[0] != 'e' {
-		key := b.decode(processedBencode)
+		key := b.Decode(processedBencode)
 		if key.err != nil {
 			return BencodeDecoded{map[interface{}]interface{}{}, 0, key.err}
 		}
 		processedBencode = processedBencode[key.end:]
-		value := b.decode(processedBencode)
+		value := b.Decode(processedBencode)
 		if value.err != nil {
 			return BencodeDecoded{map[interface{}]interface{}{}, 0, value.err}
 		}
@@ -141,11 +142,16 @@ func (b *Bencode) encodeList(value []interface{}) string {
 }
 
 func (b *Bencode) encodeDictionary(dict map[string]interface{}) string {
+	var keys []string
+	for key := range dict {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
 	var builder strings.Builder
 	builder.WriteString("d")
-	for key, value := range dict {
+	for _, key := range keys {
 		builder.WriteString(b.encode(key).value)
-		builder.WriteString(b.encode(value).value)
+		builder.WriteString(b.encode(dict[key]).value)
 	}
 	builder.WriteString("e")
 	return builder.String()
