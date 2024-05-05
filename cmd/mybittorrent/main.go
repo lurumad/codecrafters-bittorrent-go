@@ -50,6 +50,22 @@ func main() {
 		for _, peer := range trackerInfo.peers {
 			fmt.Printf("%v:%d\n", peer.ip, peer.port)
 		}
+	} else if command == "handshake" {
+		file := os.Args[2]
+		address := os.Args[3]
+		bencode := NewBencode()
+		parse := NewParseTorrentFile().Parse(bencode, file)
+		if parse.err != nil {
+			log.Fatal(parse.err)
+		}
+		response := NewPeer().Handshake(&HandshakeRequest{
+			address:  address,
+			infoHash: parse.metainfo.info.hash,
+		})
+		if response.err != nil {
+			log.Fatal(response.err)
+		}
+		fmt.Printf("Peer ID: %v\n", response.peerId)
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
