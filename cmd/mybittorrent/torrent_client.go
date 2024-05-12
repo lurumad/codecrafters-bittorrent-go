@@ -185,26 +185,11 @@ func (tc *TorrentClient) DownloadPiece(request *PieceRequest) error {
 		return handshake.Err
 	}
 	tc.WaitUntil(Bitfield, handshake.Connection)
-	//buffer := make([]byte, 4)
-	//if _, err = handshake.Connection.Read(buffer); err != nil {
-	//	return err
-	//}
-	//lengthPrefix := binary.BigEndian.Uint32(buffer)
-	//payloadBuf := make([]byte, lengthPrefix)
-	//if _, err = handshake.Connection.Read(payloadBuf); err != nil {
-	//	return err
-	//}
-	//message, err := deserialize(payloadBuf)
-	//if err != nil {
-	//	return err
-	//}
-	//if message.Id != int32(Bitfield) {
-	//	return err
-	//}
-	_, err = handshake.Connection.Write([]byte{0, 0, 0, 1, 2})
-	if err != nil {
-		return nil
+	message := PeerMessage{
+		Id:      int32(Interested),
+		Payload: struct{}{},
 	}
+	tc.SendMessage(message, handshake.Connection)
 	buf := make([]byte, 4)
 	_, err = handshake.Connection.Read(buf)
 	if err != nil {
@@ -251,10 +236,6 @@ func (tc *TorrentClient) DownloadPiece(request *PieceRequest) error {
 }
 
 func (tc *TorrentClient) pieceBlock(piece int, blockNumber int, blockLength int, connection net.Conn) ([]byte, error) {
-	fmt.Printf("blockNumber %d\n", blockNumber)
-	fmt.Printf("Begin block %d\n", uint32(blockNumber*BlockSize))
-	fmt.Printf("Length %d\n", blockLength)
-
 	message := PeerMessage{
 		Id: int32(Request),
 		Payload: PiecePayload{
@@ -291,6 +272,14 @@ func (tc *TorrentClient) pieceBlock(piece int, blockNumber int, blockLength int,
 }
 
 func (tc *TorrentClient) SendMessage(message PeerMessage, connection net.Conn) error {
+	buffer, err := serialize(message)
+	if err != nil {
+		return err
+	}
+	_, err = connection.Write(buffer)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
