@@ -208,7 +208,15 @@ func (tc *TorrentClient) DownloadPiece(request *PieceRequest) error {
 		}
 		data = append(data, buffer...)
 	}
-	file, err := os.Create(request.Output)
+	err = tc.savePrice(request.Output, err, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (tc *TorrentClient) savePrice(output string, err error, data []byte) error {
+	file, err := os.Create(output)
 	if err != nil {
 		return err
 	}
@@ -217,7 +225,6 @@ func (tc *TorrentClient) DownloadPiece(request *PieceRequest) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -230,32 +237,12 @@ func (tc *TorrentClient) pieceBlock(piece int, blockNumber int, blockLength int,
 			Length: uint32(blockLength),
 		},
 	}
-	//buffer, err := serialize(message)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if _, err = connection.Write(buffer); err != nil {
-	//	return nil, err
-	//}
 	tc.SendMessage(message, connection)
-	buffer := make([]byte, 4)
-	if _, err := connection.Read(buffer); err != nil {
-		return nil, err
-	}
-	lengthPrefix := binary.BigEndian.Uint32(buffer)
-	payloadBuffer := make([]byte, lengthPrefix)
-	_, err := io.ReadFull(connection, payloadBuffer)
+	buffer, err := tc.ReadPieceBlock(connection)
 	if err != nil {
 		return nil, err
 	}
-	message, err = deserialize(payloadBuffer)
-	if err != nil {
-		return nil, err
-	}
-	if payload, ok := message.Payload.(PieceBlockPayload); ok {
-		return payload.Block, nil
-	}
-	return nil, errors.New("expected PieceBlockPayload")
+	return buffer, nil
 }
 
 func (tc *TorrentClient) SendMessage(message PeerMessage, connection net.Conn) error {
@@ -268,6 +255,27 @@ func (tc *TorrentClient) SendMessage(message PeerMessage, connection net.Conn) e
 		return err
 	}
 	return nil
+}
+
+func (tc *TorrentClient) ReadPieceBlock(connection net.Conn) ([]byte, error) {
+	buffer := make([]byte, 4)
+	if _, err := connection.Read(buffer); err != nil {
+		return nil, err
+	}
+	lengthPrefix := binary.BigEndian.Uint32(buffer)
+	payloadBuffer := make([]byte, lengthPrefix)
+	_, err := io.ReadFull(connection, payloadBuffer)
+	if err != nil {
+		return nil, err
+	}
+	message, err := deserialize(payloadBuffer)
+	if err != nil {
+		return nil, err
+	}
+	if payload, ok := message.Payload.(PieceBlockPayload); ok {
+		return payload.Block, nil
+	}
+	return nil, errors.New("expected PieceBlockPayload")
 }
 
 func (tc *TorrentClient) WaitUntil(messageType MessageType, connection net.Conn) error {
