@@ -190,21 +190,7 @@ func (tc *TorrentClient) DownloadPiece(request *PieceRequest) error {
 		Payload: struct{}{},
 	}
 	tc.SendMessage(message, handshake.Connection)
-	buf := make([]byte, 4)
-	_, err = handshake.Connection.Read(buf)
-	if err != nil {
-		return nil
-	}
-	lengthPrefix := binary.BigEndian.Uint32(buf)
-	payloadBuf := make([]byte, lengthPrefix)
-	_, err = handshake.Connection.Read(payloadBuf)
-	defer handshake.Connection.Close()
-	if err != nil {
-		return nil
-	}
-	if payloadBuf[0] != 1 {
-		return errors.New("expected unchoke")
-	}
+	tc.WaitUntil(Unchoke, handshake.Connection)
 	numberOfFullBlocks := request.pieceLength() / BlockSize
 	lastBlockLength := request.pieceLength() % BlockSize
 	var data []byte
