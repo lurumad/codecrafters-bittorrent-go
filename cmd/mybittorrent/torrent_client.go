@@ -230,20 +230,21 @@ func (tc *TorrentClient) pieceBlock(piece int, blockNumber int, blockLength int,
 			Length: uint32(blockLength),
 		},
 	}
-	buffer, err := serialize(message)
-	if err != nil {
-		return nil, err
-	}
-	if _, err = connection.Write(buffer); err != nil {
-		return nil, err
-	}
-	buffer = make([]byte, 4)
-	if _, err = connection.Read(buffer); err != nil {
+	//buffer, err := serialize(message)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if _, err = connection.Write(buffer); err != nil {
+	//	return nil, err
+	//}
+	tc.SendMessage(message, connection)
+	buffer := make([]byte, 4)
+	if _, err := connection.Read(buffer); err != nil {
 		return nil, err
 	}
 	lengthPrefix := binary.BigEndian.Uint32(buffer)
 	payloadBuffer := make([]byte, lengthPrefix)
-	_, err = io.ReadFull(connection, payloadBuffer)
+	_, err := io.ReadFull(connection, payloadBuffer)
 	if err != nil {
 		return nil, err
 	}
