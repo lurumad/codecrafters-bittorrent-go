@@ -17,6 +17,7 @@ import (
 type TorrentClient struct {
 	bencode    *Bencode
 	httpClient *http.Client
+	connection net.Conn
 }
 
 func NewTorrentClient(bencode *Bencode) *TorrentClient {
@@ -32,14 +33,19 @@ type Peer struct {
 }
 
 type Handshake struct {
-	PeerId     string
-	Connection net.Conn
-	Err        error
+	PeerId string
+	Err    error
 }
 
 type PieceRequest struct {
+	Address string
 	Piece   int
-	PeerId  string
+	Torrent *Torrent
+	Output  string
+}
+
+type DownloadRequest struct {
+	Address string
 	Torrent *Torrent
 	Output  string
 }
@@ -80,6 +86,15 @@ const BlockSize = 16 * 1024
 
 func (peer *Peer) Address() string {
 	return peer.IP + ":" + strconv.Itoa(int(peer.Port))
+}
+
+func (tc *TorrentClient) ConnectToPeer(address string) error {
+	connection, err := net.Dial("tcp", address)
+	if err != nil {
+		return err
+	}
+	tc.connection = connection
+	return nil
 }
 
 func (tc *TorrentClient) Peers(torrent *Torrent, peerId string) ([]Peer, error) {
@@ -140,91 +155,84 @@ func (tc *TorrentClient) trackerDoGet(url *url.URL) ([]byte, error) {
 	return body, nil
 }
 
-func (tc *TorrentClient) Handshake(address string, hash []byte) *Handshake {
-	connection, err := net.Dial("tcp", address)
-	if err != nil {
-		return &Handshake{Err: err}
+func (tc *TorrentClient) Handshake(torrent *Torrent, address string) *Handshake {
+	var handshake []byte
+	handshake = append(handshake, byte(19))
+	handshake = append(handshake, []byte("BitTorrent protocol")...)
+	handshake = append(handshake, make([]byte, 8)...)
+	handshake = append(handshake, torrent.Metainfo.Info.Hash...)
+	handshake = append(handshake, []byte("00112233445566778899")...)
+	if tc.connection == nil {
+		if err := tc.ConnectToPeer(address); err != nil {
+			return &Handshake{Err: err}
+		}
 	}
-	_, err = connection.Write(handshake(hash))
+	var _, err = tc.connection.Write(handshake)
 	if err != nil {
 		return &Handshake{Err: err}
 	}
 	buffer := make([]byte, HandshakeMessageLen)
-	_, err = connection.Read(buffer)
+	_, err = tc.connection.Read(buffer)
 	if err != nil {
 		return &Handshake{Err: err}
 	}
 	peerId := hex.EncodeToString(buffer[48:HandshakeMessageLen])
 	return &Handshake{
-		PeerId:     peerId,
-		Connection: connection,
-		Err:        nil,
+		PeerId: peerId,
+		Err:    nil,
 	}
 }
 
-func handshake(hash []byte) []byte {
-	var handshake []byte
-	handshake = append(handshake, byte(19))
-	handshake = append(handshake, []byte("BitTorrent protocol")...)
-	handshake = append(handshake, make([]byte, 8)...)
-	handshake = append(handshake, hash...)
-	handshake = append(handshake, []byte("00112233445566778899")...)
-	return handshake
-}
-
-func (tc *TorrentClient) DownloadPiece(request *PieceRequest) error {
-	if !request.Torrent.ContainsPiece(request.Piece) {
-		return errors.New("info.pieces does not contain piece")
-	}
-	peers, err := tc.Peers(request.Torrent, request.PeerId)
-	if err != nil {
-		return err
-	}
-	handshake := tc.Handshake(peers[0].Address(), request.Torrent.Metainfo.Info.Hash)
-	if handshake.Err != nil {
-		return handshake.Err
-	}
-	tc.WaitUntil(Bitfield, handshake.Connection)
+func (tc *TorrentClient) DownloadPiece(request *PieceRequest) ([]byte, error) {
+	tc.ConnectToPeer(request.Address)
+	defer tc.connection.Close()
+	tc.Handshake(request.Torrent, request.Address)
+	tc.waitForMessage(Bitfield, tc.connection)
 	message := PeerMessage{
 		Id:      int32(Interested),
 		Payload: struct{}{},
 	}
-	tc.SendMessage(message, handshake.Connection)
-	tc.WaitUntil(Unchoke, handshake.Connection)
+	tc.sendMessage(message, tc.connection)
+	tc.waitForMessage(Unchoke, tc.connection)
+	if !request.Torrent.ContainsPiece(request.Piece) {
+		return nil, errors.New("info.pieces does not contain piece")
+	}
 	numberOfFullBlocks := request.pieceLength() / BlockSize
 	lastBlockLength := request.pieceLength() % BlockSize
 	var data []byte
 	for blockNumber := 0; blockNumber < numberOfFullBlocks; blockNumber++ {
-		buffer, err := tc.pieceBlock(request.Piece, blockNumber, BlockSize, handshake.Connection)
+		buffer, err := tc.pieceBlock(request.Piece, blockNumber, BlockSize, tc.connection)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		data = append(data, buffer...)
 	}
 	if lastBlockLength > 0 {
-		buffer, err := tc.pieceBlock(request.Piece, numberOfFullBlocks, lastBlockLength, handshake.Connection)
+		buffer, err := tc.pieceBlock(request.Piece, numberOfFullBlocks, lastBlockLength, tc.connection)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		data = append(data, buffer...)
 	}
-	err = tc.savePrice(request.Output, err, data)
-	if err != nil {
-		return err
-	}
-	return nil
+	os.WriteFile(request.Output, data, os.ModePerm)
+	return data, nil
 }
 
-func (tc *TorrentClient) savePrice(output string, err error, data []byte) error {
-	file, err := os.Create(output)
-	if err != nil {
-		return err
+func (tc *TorrentClient) Download(request *DownloadRequest) error {
+	var data []byte
+	for piece := range request.Torrent.Metainfo.Info.Pieces {
+		piece, err := tc.DownloadPiece(&PieceRequest{
+			Address: request.Address,
+			Piece:   piece,
+			Torrent: request.Torrent,
+			Output:  request.Output,
+		})
+		if err != nil {
+			return err
+		}
+		data = append(data, piece...)
 	}
-	defer file.Close()
-	_, err = file.Write(data)
-	if err != nil {
-		return err
-	}
+	os.WriteFile(request.Output, data, os.ModePerm)
 	return nil
 }
 
@@ -237,7 +245,7 @@ func (tc *TorrentClient) pieceBlock(piece int, blockNumber int, blockLength int,
 			Length: uint32(blockLength),
 		},
 	}
-	tc.SendMessage(message, connection)
+	tc.sendMessage(message, connection)
 	buffer, err := tc.ReadPieceBlock(connection)
 	if err != nil {
 		return nil, err
@@ -245,7 +253,7 @@ func (tc *TorrentClient) pieceBlock(piece int, blockNumber int, blockLength int,
 	return buffer, nil
 }
 
-func (tc *TorrentClient) SendMessage(message PeerMessage, connection net.Conn) error {
+func (tc *TorrentClient) sendMessage(message PeerMessage, connection net.Conn) error {
 	buffer, err := serialize(message)
 	if err != nil {
 		return err
@@ -278,7 +286,7 @@ func (tc *TorrentClient) ReadPieceBlock(connection net.Conn) ([]byte, error) {
 	return nil, errors.New("expected PieceBlockPayload")
 }
 
-func (tc *TorrentClient) WaitUntil(messageType MessageType, connection net.Conn) error {
+func (tc *TorrentClient) waitForMessage(messageType MessageType, connection net.Conn) error {
 	buffer := make([]byte, 4)
 	if _, err := connection.Read(buffer); err != nil {
 		return err

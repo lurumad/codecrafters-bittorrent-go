@@ -58,10 +58,8 @@ func main() {
 		if torrent.Err != nil {
 			log.Fatal(torrent.Err)
 		}
-		handshake := NewTorrentClient(bencode).Handshake(address, torrent.Metainfo.Info.Hash)
-		if handshake.Err != nil {
-			log.Fatal(handshake.Err)
-		}
+		client := NewTorrentClient(bencode)
+		handshake := client.Handshake(torrent, address)
 		fmt.Printf("Peer ID: %v\n", handshake.PeerId)
 	} else if command == "download_piece" {
 		output := os.Args[3]
@@ -76,9 +74,13 @@ func main() {
 			log.Fatal(torrent.Err)
 		}
 		client := NewTorrentClient(bencode)
-		err = client.DownloadPiece(&PieceRequest{
+		peers, err := client.Peers(torrent, "00112233445566778899")
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = client.DownloadPiece(&PieceRequest{
+			Address: peers[0].Address(),
 			Piece:   piece,
-			PeerId:  "00112233445566778899",
 			Torrent: torrent,
 			Output:  output,
 		})
@@ -86,6 +88,25 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("Piece %d downloaded to %v.\n", piece, output)
+	} else if command == "download" {
+		output := os.Args[3]
+		file := os.Args[4]
+		bencode := NewBencode()
+		torrent := NewTorrentParser(bencode).Parse(file)
+		if torrent.Err != nil {
+			log.Fatal(torrent.Err)
+		}
+		client := NewTorrentClient(bencode)
+		peers, err := client.Peers(torrent, "00112233445566778899")
+		if err != nil {
+			log.Fatal(err)
+		}
+		client.Download(&DownloadRequest{
+			Address: peers[0].Address(),
+			Torrent: torrent,
+			Output:  output,
+		})
+		fmt.Printf("Downloaded %v to %v.", file, output)
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
